@@ -1,0 +1,347 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "VisionCoreGraph Pipeline",
+    "output": "architecture-embed.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1300,
+      680
+    ],
+    "views": [
+      {
+        "id": "ingest",
+        "label": "Ingest path",
+        "focus": [
+          "video",
+          "filter",
+          "tracker",
+          "extract",
+          "reducer",
+          "kuzu"
+        ],
+        "note": "Video in, typed temporal graph out. Batch only; every stage is cache-keyed."
+      },
+      {
+        "id": "ensemble",
+        "label": "Detector ensemble",
+        "focus": [
+          "filter",
+          "yolo",
+          "owlv2",
+          "tracker"
+        ],
+        "note": "Neither detector covers the schema alone, so classes are routed to whichever can see them."
+      },
+      {
+        "id": "ontology",
+        "label": "Schema as contract",
+        "focus": [
+          "schema",
+          "extract",
+          "reducer",
+          "kuzu"
+        ],
+        "note": "One declared schema constrains extraction, drives the reducer, and generates the DDL."
+      },
+      {
+        "id": "retrieval",
+        "label": "Retrieval path",
+        "focus": [
+          "question",
+          "retriever",
+          "kuzu",
+          "openrouter"
+        ],
+        "note": "The NL step is the only non-deterministic part of answering; the compiler below it is tested."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "video",
+      "type": "external",
+      "label": "Video file",
+      "sublabel": "mp4 / h264",
+      "pos": [
+        560,
+        30
+      ],
+      "size": [
+        180,
+        56
+      ]
+    },
+    {
+      "id": "filter",
+      "type": "backend",
+      "label": "DualPhaseFilter",
+      "sublabel": "fixed-stride decode",
+      "tag": "stage 1 \u00b7 PyAV",
+      "pos": [
+        560,
+        116
+      ],
+      "size": [
+        180,
+        56
+      ]
+    },
+    {
+      "id": "yolo",
+      "type": "backend",
+      "label": "YOLOv11n",
+      "sublabel": "COCO-covered classes",
+      "tag": "person \u00b7 bag \u00b7 conf 0.25",
+      "pos": [
+        330,
+        206
+      ],
+      "size": [
+        195,
+        58
+      ]
+    },
+    {
+      "id": "owlv2",
+      "type": "backend",
+      "label": "OWLv2",
+      "sublabel": "open-vocab text queries",
+      "tag": "door \u00b7 pallet \u00b7 conf 0.08",
+      "pos": [
+        775,
+        206
+      ],
+      "size": [
+        195,
+        58
+      ]
+    },
+    {
+      "id": "tracker",
+      "type": "backend",
+      "label": "ByteTrack",
+      "sublabel": "one tracker per class",
+      "tag": "ids: person1, door2",
+      "pos": [
+        560,
+        296
+      ],
+      "size": [
+        180,
+        56
+      ]
+    },
+    {
+      "id": "extract",
+      "type": "backend",
+      "label": "VLMExtractor",
+      "sublabel": "Set-of-Mark + retry / drop",
+      "tag": "stage 3 \u00b7 costs money",
+      "pos": [
+        555,
+        386
+      ],
+      "size": [
+        190,
+        56
+      ]
+    },
+    {
+      "id": "openrouter",
+      "type": "external",
+      "label": "OpenRouter",
+      "sublabel": "hosted vision model",
+      "tag": "network dependency",
+      "pos": [
+        900,
+        386
+      ],
+      "size": [
+        190,
+        56
+      ]
+    },
+    {
+      "id": "reducer",
+      "type": "backend",
+      "label": "StateReducer",
+      "sublabel": "events to intervals",
+      "tag": "pure \u00b7 deterministic",
+      "pos": [
+        560,
+        478
+      ],
+      "size": [
+        180,
+        56
+      ]
+    },
+    {
+      "id": "kuzu",
+      "type": "database",
+      "label": "Kuzu",
+      "sublabel": "embedded graph store",
+      "tag": "no server, no Docker",
+      "pos": [
+        560,
+        570
+      ],
+      "size": [
+        180,
+        56
+      ]
+    },
+    {
+      "id": "schema",
+      "type": "security",
+      "label": "SkillSchema",
+      "sublabel": "declared ontology",
+      "tag": "closed vocabulary",
+      "pos": [
+        210,
+        386
+      ],
+      "size": [
+        180,
+        56
+      ]
+    },
+    {
+      "id": "question",
+      "type": "external",
+      "label": "Question",
+      "sublabel": "natural language",
+      "pos": [
+        1120,
+        570
+      ],
+      "size": [
+        170,
+        56
+      ]
+    },
+    {
+      "id": "retriever",
+      "type": "backend",
+      "label": "Retriever",
+      "sublabel": "NL to IR to Cypher",
+      "tag": "validated before it runs",
+      "pos": [
+        900,
+        570
+      ],
+      "size": [
+        190,
+        56
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Stage 2 \u00b7 Detect + Track ensemble",
+      "wraps": [
+        "yolo",
+        "owlv2",
+        "tracker"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "video-to-filter",
+      "from": "video",
+      "to": "filter",
+      "variant": "emphasis"
+    },
+    {
+      "id": "filter-to-yolo",
+      "from": "filter",
+      "to": "yolo"
+    },
+    {
+      "id": "filter-to-owlv2",
+      "from": "filter",
+      "to": "owlv2"
+    },
+    {
+      "id": "yolo-to-tracker",
+      "from": "yolo",
+      "to": "tracker"
+    },
+    {
+      "id": "owlv2-to-tracker",
+      "from": "owlv2",
+      "to": "tracker"
+    },
+    {
+      "id": "tracker-to-extract",
+      "from": "tracker",
+      "to": "extract",
+      "variant": "emphasis"
+    },
+    {
+      "id": "extract-to-vlm",
+      "from": "extract",
+      "to": "openrouter",
+      "label": "marked frame",
+      "variant": "dashed"
+    },
+    {
+      "id": "extract-to-reducer",
+      "from": "extract",
+      "to": "reducer",
+      "label": "events @ frame time",
+      "variant": "emphasis",
+      "labelDy": 24
+    },
+    {
+      "id": "schema-to-extract",
+      "from": "schema",
+      "to": "extract",
+      "label": "relation vocabulary",
+      "variant": "security"
+    },
+    {
+      "id": "schema-to-reducer",
+      "from": "schema",
+      "to": "reducer",
+      "label": "transition rules",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "via": [
+        [
+          300,
+          506
+        ]
+      ]
+    },
+    {
+      "id": "reducer-to-kuzu",
+      "from": "reducer",
+      "to": "kuzu",
+      "variant": "emphasis"
+    },
+    {
+      "id": "question-to-retriever",
+      "from": "question",
+      "to": "retriever"
+    },
+    {
+      "id": "retriever-to-kuzu",
+      "from": "retriever",
+      "to": "kuzu",
+      "label": "compiled Cypher"
+    },
+    {
+      "id": "retriever-to-vlm",
+      "from": "retriever",
+      "to": "openrouter",
+      "label": "NL to IR",
+      "variant": "dashed"
+    }
+  ]
+}

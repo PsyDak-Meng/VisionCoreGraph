@@ -1,0 +1,28 @@
+[project]
+name = "visioncoregraph"
+version = "0.1.0"
+description = "Video-to-temporal-knowledge-graph SDK"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2",
+    "kuzu>=0.4",
+    "ultralytics>=8.3",
+    "transformers>=4.40",
+    "supervision>=0.22",
+    "torch>=2",
+    "av>=12",
+    "pillow",
+    "requests",
+    "python-dotenv",
+    "numpy",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["core*", "eval*"]

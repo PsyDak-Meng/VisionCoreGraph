@@ -1,0 +1,15 @@
+.env
+.vgc_cache/
+eval/qa/clips/*
+!eval/qa/clips/.gitkeep
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# generated run artifacts (embed the source video as base64)
+run_view.html
+*_view.html
+
+# auto-downloaded detector weights
+*.pt
